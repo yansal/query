@@ -149,8 +149,8 @@ func WithCountryParam(key string) Option {
 	return WithStringsParam(key, []string{"UK", "US", "FR", "BE", "CA", "ES", "IT", "DE"})
 }
 
-// WithParam is a custom param option.
-func WithParam(key string, handler ParamHandler) Option {
+// WithCustomParam is a custom param option.
+func WithCustomParam(key string, handler ParamHandler) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
