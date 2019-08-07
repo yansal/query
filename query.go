@@ -119,9 +119,8 @@ func WithStringsParam(key string, choices []string) Option {
 			q.handlers = make(map[string]ParamHandler)
 		}
 		q.handlers[key] = func(values []string) (interface{}, error) {
-			commaseparated := strings.Join(values, ",")
 			var out []string
-			for _, v := range strings.Split(commaseparated, ",") {
+			for _, v := range values {
 				var ok bool
 				for i := range choices {
 					if v == choices[i] {
