@@ -7,7 +7,7 @@ import (
 	"github.com/yansal/query"
 )
 
-func Example() {
+func Example_Validate() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		q, err := query.Validate(r.URL.Query(),
 			query.WithIntParam("goal"),
