@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 
 	"github.com/yansal/query"
@@ -38,36 +39,6 @@ func ExampleValidate() {
 	// Output: 3
 }
 
-func TestWithDefault(t *testing.T) {
-	defaultgoal := 42
-	q, err := query.Validate(url.Values{},
-		query.WithIntParam("goal", query.WithDefault(defaultgoal)),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	goal, ok := q.Params["goal"]
-	if !ok {
-		t.Error("expected to have goal")
-	}
-	if goal != defaultgoal {
-		t.Errorf("expected goal to be %d, got %d", defaultgoal, goal)
-	}
-}
-
-func TestHasNoDefault(t *testing.T) {
-	q, err := query.Validate(url.Values{},
-		query.WithIntParam("goal"),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	goal, ok := q.Params["goal"]
-	if ok {
-		t.Errorf("expected to not have goal, got %v", goal)
-	}
-}
-
 func TestUnknownKey(t *testing.T) {
 	_, err := query.Validate(url.Values{
 		"unknown": []string{"key"},
@@ -84,10 +55,46 @@ func TestUnknownKey(t *testing.T) {
 	if !ok {
 		t.Errorf("expected to have query.UnknownKeyError, got %v (%T)", err, err)
 	}
-	if len(uerr) != 1 {
-		t.Errorf("expected to have 1 unknown key, got %d", len(uerr))
+	if uerr != "unknown" {
+		t.Errorf(`expected unknown key to be "unknown", got %q`, uerr)
 	}
-	if uerr[0] != "unknown" {
-		t.Errorf(`expected unknown key to be "unknown", got %q`, uerr[0])
+}
+
+func Test(t *testing.T) {
+	var (
+		i int64 = 42
+		s       = "foo"
+	)
+	q, err := query.Validate(url.Values{
+		"i": []string{strconv.FormatInt(i, 10)},
+		"s": []string{s},
+	},
+		query.WithIntParam("i"),
+		query.WithStringParam("s"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Params) != 2 {
+		t.Errorf("expected 2 params, got %d", len(q.Params))
+	}
+	ii := q.Params["i"].(int64)
+	if ii != i {
+		t.Errorf("expected i to be %d, got %d", i, ii)
+	}
+	ss := q.Params["s"].(string)
+	if ss != s {
+		t.Errorf("expected s to be %s, got %s", s, ss)
+	}
+}
+func TestNoParam(t *testing.T) {
+	q, err := query.Validate(url.Values{},
+		query.WithStringParam("s"),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Params) != 0 {
+		t.Errorf("expected 0 params, got %d", len(q.Params))
 	}
 }

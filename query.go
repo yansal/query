@@ -1,7 +1,6 @@
 package query
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -22,30 +21,24 @@ func Validate(v url.Values, options ...Option) (*Query, error) {
 	}
 
 	var errs Errors
-	for key, handler := range q.handlers {
-		value, err := handler(v[key])
-		if err == errHasNoDefault {
+	for key, values := range v {
+		handler, ok := q.handlers[key]
+		if !ok {
+			errs = append(errs, UnknownKeyError(key))
 			continue
 		}
-		delete(v, key)
+		value, err := handler(values)
 		if perr, ok := err.(ParamError); ok {
 			errs = append(errs, perr)
 			continue
 		} else if err != nil {
 			return nil, err
 		}
+
 		if q.Params == nil {
 			q.Params = make(map[string]interface{})
 		}
 		q.Params[key] = value
-	}
-
-	var unknown []string
-	for k := range v {
-		unknown = append(unknown, k)
-	}
-	if unknown != nil {
-		errs = append(errs, UnknownKeyError(unknown))
 	}
 	if errs != nil {
 		return nil, errs
@@ -68,13 +61,11 @@ func (e Errors) Error() string {
 }
 
 // UnknownKeyError is an unknown key error.
-type UnknownKeyError []string
+type UnknownKeyError string
 
 func (u UnknownKeyError) Error() string {
-	return fmt.Sprintf("%s: unknown", strings.Join(u, ","))
+	return fmt.Sprintf("%s: unknown", string(u))
 }
-
-var errHasNoDefault = errors.New("has no default")
 
 // ParamError is an error with a param.
 type ParamError struct {
@@ -87,22 +78,12 @@ func (f ParamError) Error() string {
 }
 
 // WithStringParam is a string param option.
-func WithStringParam(key string, options ...ParamOption) Option {
-	var opts ParamOptions
-	for _, o := range options {
-		o(&opts)
-	}
+func WithStringParam(key string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
 		}
 		q.handlers[key] = func(values []string) (interface{}, error) {
-			if values == nil {
-				if opts.defaultvalue == nil {
-					return nil, errHasNoDefault
-				}
-				return opts.defaultvalue, nil
-			}
 			if len(values) != 1 {
 				return nil, ParamError{Key: key, Message: fmt.Sprintf("expected one value, got %d", len(values))}
 			}
@@ -112,23 +93,12 @@ func WithStringParam(key string, options ...ParamOption) Option {
 }
 
 // WithIntParam is an int param option.
-func WithIntParam(key string, options ...ParamOption) Option {
-	var opts ParamOptions
-	for _, o := range options {
-		o(&opts)
-	}
-
+func WithIntParam(key string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
 		}
 		q.handlers[key] = func(values []string) (interface{}, error) {
-			if values == nil {
-				if opts.defaultvalue == nil {
-					return nil, errHasNoDefault
-				}
-				return opts.defaultvalue, nil
-			}
 			if len(values) != 1 {
 				return nil, ParamError{Key: key, Message: fmt.Sprintf("expected one value, got %d", len(values))}
 			}
@@ -142,23 +112,12 @@ func WithIntParam(key string, options ...ParamOption) Option {
 }
 
 // WithStringsParam is a strings param option.
-func WithStringsParam(key string, choices []string, options ...ParamOption) Option {
-	var opts ParamOptions
-	for _, o := range options {
-		o(&opts)
-	}
-
+func WithStringsParam(key string, choices []string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
 		}
 		q.handlers[key] = func(values []string) (interface{}, error) {
-			if values == nil {
-				if opts.defaultvalue == nil {
-					return nil, errHasNoDefault
-				}
-				return opts.defaultvalue, nil
-			}
 			var out []string
 			for _, v := range values {
 				var ok bool
@@ -190,18 +149,3 @@ func WithParam(key string, handler ParamHandler) Option {
 
 // A ParamHandler parses a list of values.
 type ParamHandler func(values []string) (interface{}, error)
-
-// A ParamOption is a functional option for params.
-type ParamOption func(*ParamOptions)
-
-// ParamOptions are param options.
-type ParamOptions struct {
-	defaultvalue interface{}
-}
-
-// WithDefault sets a param default value.
-func WithDefault(value interface{}) ParamOption {
-	return func(o *ParamOptions) {
-		o.defaultvalue = value
-	}
-}
