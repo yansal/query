@@ -15,7 +15,7 @@ type Query struct {
 
 // Validate validates v and returns a new Query.
 func Validate(v url.Values, options ...Option) (*Query, error) {
-	q := Query{}
+	var q Query
 	for _, o := range options {
 		o(&q)
 	}
@@ -29,8 +29,8 @@ func Validate(v url.Values, options ...Option) (*Query, error) {
 		}
 
 		value, err := handler(values)
-		if ferr, ok := err.(ParamError); ok {
-			errs = append(errs, ferr)
+		if perr, ok := err.(ParamError); ok {
+			errs = append(errs, perr)
 			continue
 		} else if err != nil {
 			return nil, err
@@ -137,16 +137,6 @@ func WithStringsParam(key string, choices []string) Option {
 			return out, nil
 		}
 	}
-}
-
-// WithLangParam is a lang param option.
-func WithLangParam(key string) Option {
-	return WithStringsParam(key, []string{"en", "fr", "es", "it", "de"})
-}
-
-// WithCountryParam is a country param option.
-func WithCountryParam(key string) Option {
-	return WithStringsParam(key, []string{"UK", "US", "FR", "BE", "CA", "ES", "IT", "DE"})
 }
 
 // WithCustomParam is a custom param option.
