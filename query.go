@@ -78,8 +78,8 @@ func (f ParamError) Error() string {
 	return fmt.Sprintf("%s: %s", f.Key, f.Message)
 }
 
-// WithStringFilter is a string filter option.
-func WithStringFilter(key string) Option {
+// WithStringParam is a string param option.
+func WithStringParam(key string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
@@ -93,8 +93,8 @@ func WithStringFilter(key string) Option {
 	}
 }
 
-// WithIntFilter is an int filter option.
-func WithIntFilter(key string) Option {
+// WithIntParam is an int param option.
+func WithIntParam(key string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
@@ -112,8 +112,8 @@ func WithIntFilter(key string) Option {
 	}
 }
 
-// WithChoicesFilter is a choices filter option.
-func WithChoicesFilter(key string, choices []string) Option {
+// WithStringsParam is a strings param option.
+func WithStringsParam(key string, choices []string) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
@@ -139,49 +139,18 @@ func WithChoicesFilter(key string, choices []string) Option {
 	}
 }
 
-// WithMapFilter is a map filter option.
-func WithMapFilter(key string, m map[string]int64) Option {
-	var choices []string
-	for key := range m {
-		choices = append(choices, key)
-	}
-	return func(q *Query) {
-		if q.handlers == nil {
-			q.handlers = make(map[string]ParamHandler)
-		}
-		q.handlers[key] = func(values []string) (interface{}, error) {
-			commaseparated := strings.Join(values, ",")
-			var out []int64
-			for _, v := range strings.Split(commaseparated, ",") {
-				var ok bool
-				for mapkey, mapvalue := range m {
-					if v == mapkey {
-						out = append(out, mapvalue)
-						ok = true
-						break
-					}
-				}
-				if !ok {
-					return nil, ParamError{Key: key, Message: fmt.Sprintf("value %q is not a valid choice, expected one of %v", v, choices)}
-				}
-			}
-			return out, nil
-		}
-	}
+// WithLangParam is a lang param option.
+func WithLangParam(key string) Option {
+	return WithStringsParam(key, []string{"en", "fr", "es", "it", "de"})
 }
 
-// WithLangFilter is a lang filter option.
-func WithLangFilter(key string) Option {
-	return WithChoicesFilter(key, []string{"en", "fr", "es", "it", "de"})
+// WithCountryParam is a country param option.
+func WithCountryParam(key string) Option {
+	return WithStringsParam(key, []string{"UK", "US", "FR", "BE", "CA", "ES", "IT", "DE"})
 }
 
-// WithCountryFilter is a country filter option.
-func WithCountryFilter(key string) Option {
-	return WithChoicesFilter(key, []string{"UK", "US", "FR", "BE", "CA", "ES", "IT", "DE"})
-}
-
-// WithFilter is a custom filter option.
-func WithFilter(key string, handler ParamHandler) Option {
+// WithParam is a custom param option.
+func WithParam(key string, handler ParamHandler) Option {
 	return func(q *Query) {
 		if q.handlers == nil {
 			q.handlers = make(map[string]ParamHandler)
