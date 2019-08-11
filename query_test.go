@@ -18,10 +18,10 @@ func ExampleValidate() {
 		"url":    []string{"http://google.com"},
 	}
 	_, err := query.Validate(v,
-		query.WithIntParam("goal"),
-		query.WithStringParam("q"),
-		query.WithStringsParam("status", []string{"pending", "processing", "success", "failure"}),
-		query.WithParam("url", func(values []string) (interface{}, error) {
+		query.IntParam("goal"),
+		query.StringParam("q"),
+		query.StringsParam("status", []string{"pending", "processing", "success", "failure"}),
+		query.CustomParam("url", func(values []string) (interface{}, error) {
 			if len(values) != 1 {
 				return nil, query.ParamError{Key: "url", Message: fmt.Sprintf("expected one value, got %d", len(values))}
 			}
@@ -69,32 +69,32 @@ func Test(t *testing.T) {
 		"i": []string{strconv.FormatInt(i, 10)},
 		"s": []string{s},
 	},
-		query.WithIntParam("i"),
-		query.WithStringParam("s"),
+		query.IntParam("i"),
+		query.StringParam("s"),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(q.Params) != 2 {
-		t.Errorf("expected 2 params, got %d", len(q.Params))
+	if len(q) != 2 {
+		t.Errorf("expected 2 params, got %d", len(q))
 	}
-	ii := q.Params["i"].(int64)
+	ii := q["i"].(int64)
 	if ii != i {
 		t.Errorf("expected i to be %d, got %d", i, ii)
 	}
-	ss := q.Params["s"].(string)
+	ss := q["s"].(string)
 	if ss != s {
 		t.Errorf("expected s to be %s, got %s", s, ss)
 	}
 }
 func TestNoParam(t *testing.T) {
 	q, err := query.Validate(url.Values{},
-		query.WithStringParam("s"),
+		query.StringParam("s"),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(q.Params) != 0 {
-		t.Errorf("expected 0 params, got %d", len(q.Params))
+	if len(q) != 0 {
+		t.Errorf("expected 0 params, got %d", len(q))
 	}
 }

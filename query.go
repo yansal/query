@@ -8,21 +8,24 @@ import (
 )
 
 // A Query is a validated query string.
-type Query struct {
-	Params   map[string]interface{}
-	handlers map[string]ParamHandler
+type Query map[string]interface{}
+
+// A Param is a param.
+type Param struct {
+	key     string
+	handler ParamHandler
 }
 
 // Validate validates v and returns a new Query.
-func Validate(v url.Values, options ...Option) (*Query, error) {
+func Validate(v url.Values, params ...Param) (Query, error) {
 	var q Query
-	for _, o := range options {
-		o(&q)
+	handlers := make(map[string]ParamHandler)
+	for _, param := range params {
+		handlers[param.key] = param.handler
 	}
-
 	var errs Errors
 	for key, values := range v {
-		handler, ok := q.handlers[key]
+		handler, ok := handlers[key]
 		if !ok {
 			errs = append(errs, UnknownKeyError(key))
 			continue
@@ -35,19 +38,16 @@ func Validate(v url.Values, options ...Option) (*Query, error) {
 			return nil, err
 		}
 
-		if q.Params == nil {
-			q.Params = make(map[string]interface{})
+		if q == nil {
+			q = make(map[string]interface{})
 		}
-		q.Params[key] = value
+		q[key] = value
 	}
 	if errs != nil {
 		return nil, errs
 	}
-	return &q, nil
+	return q, nil
 }
-
-// An Option is a functional option for query parsing.
-type Option func(q *Query)
 
 // Errors is a list of errors.
 type Errors []error
@@ -77,28 +77,24 @@ func (f ParamError) Error() string {
 	return fmt.Sprintf("%s: %s", f.Key, f.Message)
 }
 
-// WithStringParam is a string param option.
-func WithStringParam(key string) Option {
-	return func(q *Query) {
-		if q.handlers == nil {
-			q.handlers = make(map[string]ParamHandler)
-		}
-		q.handlers[key] = func(values []string) (interface{}, error) {
+// StringParam is a string param.
+func StringParam(key string) Param {
+	return Param{
+		key: key,
+		handler: func(values []string) (interface{}, error) {
 			if len(values) != 1 {
 				return nil, ParamError{Key: key, Message: fmt.Sprintf("expected one value, got %d", len(values))}
 			}
 			return values[0], nil
-		}
+		},
 	}
 }
 
-// WithIntParam is an int param option.
-func WithIntParam(key string) Option {
-	return func(q *Query) {
-		if q.handlers == nil {
-			q.handlers = make(map[string]ParamHandler)
-		}
-		q.handlers[key] = func(values []string) (interface{}, error) {
+// IntParam is an int param.
+func IntParam(key string) Param {
+	return Param{
+		key: key,
+		handler: func(values []string) (interface{}, error) {
 			if len(values) != 1 {
 				return nil, ParamError{Key: key, Message: fmt.Sprintf("expected one value, got %d", len(values))}
 			}
@@ -107,17 +103,15 @@ func WithIntParam(key string) Option {
 				return nil, ParamError{Key: key, Message: err.Error()}
 			}
 			return i, nil
-		}
+		},
 	}
 }
 
-// WithStringsParam is a strings param option.
-func WithStringsParam(key string, choices []string) Option {
-	return func(q *Query) {
-		if q.handlers == nil {
-			q.handlers = make(map[string]ParamHandler)
-		}
-		q.handlers[key] = func(values []string) (interface{}, error) {
+// StringsParam is a strings param.
+func StringsParam(key string, choices []string) Param {
+	return Param{
+		key: key,
+		handler: func(values []string) (interface{}, error) {
 			var out []string
 			for _, v := range values {
 				var ok bool
@@ -133,17 +127,15 @@ func WithStringsParam(key string, choices []string) Option {
 				}
 			}
 			return out, nil
-		}
+		},
 	}
 }
 
-// WithParam is a custom param option.
-func WithParam(key string, handler ParamHandler) Option {
-	return func(q *Query) {
-		if q.handlers == nil {
-			q.handlers = make(map[string]ParamHandler)
-		}
-		q.handlers[key] = handler
+// CustomParam is a custom param.
+func CustomParam(key string, handler ParamHandler) Param {
+	return Param{
+		key:     key,
+		handler: handler,
 	}
 }
 
